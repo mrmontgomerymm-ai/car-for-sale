@@ -468,45 +468,45 @@ form.addEventListener('change', saveDraft);
 form.addEventListener('reset', () => setTimeout(saveDraft));
 
 /* ----- detect new versions of this page ----- */
-let baseTag = null, pending = false, dismissedTag = null;
-async function pageTag() {
-  if (!/^https?:/.test(location.protocol)) return null;
+// The copy on screen is dated by its own Last-Modified header (document.lastModified),
+// so even a stale cached copy knows it is out of date.
+const loadedAt = Date.parse(document.lastModified) || Date.now();
+let pending = 0, dismissed = 0, checking = false;
+(function cleanUrl() {            // drop the cache-busting ?v= after a refresh, keep shared links tidy
+  if (/[?&]v=\d+/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
+})();
+async function latestModified() {
+  if (!/^https?:/.test(location.protocol)) return 0;
   try {
-    const u = location.pathname + '?_v=' + Date.now();
-    const r = await fetch(u, {method: 'HEAD', cache: 'no-store'});
-    return r.ok ? (r.headers.get('etag') || r.headers.get('last-modified')) : null;
-  } catch { return null; }
+    const r = await fetch(location.pathname + '?_v=' + Date.now(), {method: 'HEAD', cache: 'no-store'});
+    return r.ok ? (Date.parse(r.headers.get('last-modified')) || 0) : 0;
+  } catch { return 0; }
 }
 function isActive() {
   const a = document.activeElement;
-  const typing = a && form.contains(a);
-  const hasDraft = !!store.get(DRAFT_KEY, localStorage);
-  return typing || hasDraft || $('lb').classList.contains('open');
+  return (a && form.contains(a)) || !!store.get(DRAFT_KEY, localStorage) || $('lb').classList.contains('open');
 }
 function reloadKeepingState() {
   saveDraft();
   const a = document.activeElement;
   store.set(VIEW_KEY, {y: scrollY, photo: cur, focus: a && form.contains(a) ? a.name : null}, sessionStorage);
-  location.reload();
+  // unique URL bypasses the browser and CDN caches so the newest version always loads
+  location.replace(location.pathname + '?v=' + (pending || Date.now()) + location.hash);
 }
 async function checkForUpdate() {
-  if (document.hidden && !pending) { /* checked again when the tab is visible */ }
-  const tag = await pageTag();
-  if (!tag) return;
-  if (!baseTag) { baseTag = tag; return; }
-  if (tag === baseTag || tag === dismissedTag) return;
-  pending = tag;
-  if (document.hidden || !isActive()) {
-    // not in use: refresh quietly (immediately if hidden, otherwise when visible again)
-    if (document.hidden) reloadKeepingState(); else $('toast').classList.add('show');
-  } else {
-    $('toast').classList.add('show');
-  }
+  if (checking) return; checking = true;
+  const latest = await latestModified();
+  checking = false;
+  if (!latest || latest <= loadedAt + 1000 || latest === dismissed) return;
+  pending = latest;
+  if (isActive()) $('toast').classList.add('show');   // in use: ask first
+  else reloadKeepingState();                         // just browsing: update quietly
 }
 $('tGo').onclick = reloadKeepingState;
-$('tLater').onclick = () => { dismissedTag = pending; pending = false; $('toast').classList.remove('show'); };
+$('tLater').onclick = () => { dismissed = pending; $('toast').classList.remove('show'); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
 addEventListener('focus', checkForUpdate);
+addEventListener('pageshow', e => { if (e.persisted) checkForUpdate(); });  // back/forward cache
 checkForUpdate();
 setInterval(() => { if (!document.hidden) checkForUpdate(); }, 60000);
 </script>
