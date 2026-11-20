@@ -192,8 +192,8 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
       <button class="btn btn-ghost btn-sm2" id="copyVin" type="button">Copy VIN</button>
     </div>
     <div class="hist">
-      <a class="btn btn-primary" id="carfaxBtn" target="_blank" rel="noopener">View Carfax report</a>
-      <a class="btn btn-ghost" href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener">Check recalls (NHTSA)</a>
+      <a class="btn btn-primary" id="carfaxBtn" href="https://www.carfax.com/vehicle-history-reports/" target="_blank" rel="noopener">Check Carfax</a>
+      <a class="btn btn-ghost" id="nhtsaBtn" href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener">Check recalls (NHTSA)</a>
     </div>
     <div class="hist-note" id="histNote"></div>
   </section>
@@ -268,7 +268,7 @@ const CONFIG = {
   formspreeId: "",                // optional: Formspree form ID (e.g. "xyzabcd") to receive inquiries by email
   status: "Available",
   vin: "4T3BA3BB5EU055973",
-  carfaxUrl: "",                  // paste a shareable Carfax report link here; "" shows "available on request"            // "Available", "Pending", or "Sold"
+  carfaxUrl: "",                  // optional: a shareable Carfax report link; "" sends buyers to carfax.com to look up the VIN            // "Available", "Pending", or "Sold"
   specs: [
     ["Mileage", "132,515 mi"],
     ["Engine", "2.7L 4-cyl · 181 hp"],
@@ -339,15 +339,21 @@ if (CONFIG.vin) {
     }
     setTimeout(() => $('copyVin').textContent = 'Copy VIN', 1800);
   };
+  // Copy the VIN on the way out so the buyer can paste it on Carfax / NHTSA
+  const copyThen = btn => btn.addEventListener('click', () => {
+    navigator.clipboard?.writeText(CONFIG.vin).then(() => {
+      $('histNote').textContent = 'VIN copied — paste it into the search box on the page that just opened.';
+    }).catch(() => {});
+  });
   if (CONFIG.carfaxUrl) {
     $('carfaxBtn').href = CONFIG.carfaxUrl;
-    $('histNote').textContent = 'Recall check: copy the VIN, then paste it into the NHTSA search box.';
+    $('carfaxBtn').textContent = 'View Carfax report';
+    $('histNote').textContent = 'Tapping Check recalls copies the VIN so you can paste it on NHTSA.';
   } else {
-    $('carfaxBtn').textContent = 'Request Carfax report';
-    $('carfaxBtn').removeAttribute('target');
-    $('carfaxBtn').href = 'sms:' + telDigits + '?&body=' + encodeURIComponent('Hi, could you send the Carfax report for the ' + title + '?');
-    $('histNote').textContent = 'Carfax report available on request. Recall check: copy the VIN, then paste it into the NHTSA search box.';
+    copyThen($('carfaxBtn'));
+    $('histNote').textContent = 'Tapping either button copies the VIN so you can paste it on the next page.';
   }
+  copyThen($('nhtsaBtn'));
 } else { $('historyCard').style.display = 'none'; }
 
 /* ----- gallery ----- */
