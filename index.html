@@ -98,6 +98,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .status.err{background:#fdecec;color:#c53030}
 .hp{position:absolute;left:-9999px}
 
+.vinbox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.vin{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;font-weight:700;letter-spacing:.06em;word-break:break-all}
+.vin-k{font-size:12px;color:var(--muted);font-weight:600}
+.btn-sm2{min-height:40px;padding:8px 14px;font-size:14px;border-radius:10px}
+.hist{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.hist .btn{width:100%}
+.hist-note{font-size:13px;color:var(--muted);margin-top:10px}
 footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
 
 /* sticky action bar */
@@ -129,6 +137,7 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
   .thumbs button{width:72px}
   .topbar a.btn-sm{display:none}
   .lb .nav{display:none}
+  .hist{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -164,6 +173,19 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
   <section class="card card-pad">
     <h2>Vehicle details</h2>
     <div class="specs" id="specs"></div>
+  </section>
+
+  <section class="card card-pad" id="historyCard">
+    <h2>VIN &amp; vehicle history</h2>
+    <div class="vinbox">
+      <div><div class="vin-k">VIN</div><div class="vin" id="vin"></div></div>
+      <button class="btn btn-ghost btn-sm2" id="copyVin" type="button">Copy VIN</button>
+    </div>
+    <div class="hist">
+      <a class="btn btn-primary" id="carfaxBtn" target="_blank" rel="noopener">View Carfax report</a>
+      <a class="btn btn-ghost" href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener">Check recalls (NHTSA)</a>
+    </div>
+    <div class="hist-note" id="histNote"></div>
   </section>
 
   <section class="card card-pad">
@@ -228,7 +250,9 @@ const CONFIG = {
   phone: "713-518-4800",          // used for Call / Text buttons
   email: "",                      // optional: fallback inquiries open an email to this address
   formspreeId: "",                // optional: Formspree form ID (e.g. "xyzabcd") to receive inquiries by email
-  status: "Available",            // "Available", "Pending", or "Sold"
+  status: "Available",
+  vin: "4T3BA3BB5EU055973",
+  carfaxUrl: "",                  // paste a shareable Carfax report link here; "" shows "available on request"            // "Available", "Pending", or "Sold"
   specs: [
     ["Mileage", "132,515 mi"],
     ["Engine", "2.7L 4-cyl · 181 hp"],
@@ -285,6 +309,25 @@ $('notes').innerHTML = CONFIG.notes.map(n => `<p>${esc(n)}</p>`).join('');
 $('foot').textContent = title + ' · ' + CONFIG.location;
 $('callBtn').href = 'tel:' + telDigits;
 $('textBtn').href = 'sms:' + telDigits + '?&body=' + encodeURIComponent("Hi, is the " + title + " still available?");
+
+/* ----- VIN & history ----- */
+if (CONFIG.vin) {
+  $('vin').textContent = CONFIG.vin;
+  $('copyVin').onclick = async () => {
+    try { await navigator.clipboard.writeText(CONFIG.vin); }
+    catch { const t = document.createElement('textarea'); t.value = CONFIG.vin; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    $('copyVin').textContent = 'Copied ✓'; setTimeout(() => $('copyVin').textContent = 'Copy VIN', 1800);
+  };
+  if (CONFIG.carfaxUrl) {
+    $('carfaxBtn').href = CONFIG.carfaxUrl;
+    $('histNote').textContent = 'Recall check: copy the VIN, then paste it into the NHTSA search box.';
+  } else {
+    $('carfaxBtn').textContent = 'Request Carfax report';
+    $('carfaxBtn').removeAttribute('target');
+    $('carfaxBtn').href = 'sms:' + telDigits + '?&body=' + encodeURIComponent('Hi, could you send the Carfax report for the ' + title + '?');
+    $('histNote').textContent = 'Carfax report available on request. Recall check: copy the VIN, then paste it into the NHTSA search box.';
+  }
+} else { $('historyCard').style.display = 'none'; }
 
 /* ----- gallery ----- */
 let cur = 0;
