@@ -221,6 +221,8 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
           <option>Make an offer</option>
           <option>Ask a question</option>
         </select></div>
+      <div class="field full"><label for="f-source">How did you hear about this listing?</label>
+        <select id="f-source" name="source"><option value="">Select one…</option></select></div>
       <div class="field full"><label for="f-msg">Message</label><textarea id="f-msg" name="message" placeholder="Best day/time to see it, offer amount, questions…"></textarea></div>
       <input class="hp" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="status" id="status"></div>
@@ -267,6 +269,7 @@ const CONFIG = {
   email: "",                      // optional: fallback inquiries open an email to this address
   formspreeId: "",                // optional: Formspree form ID (e.g. "xyzabcd") to receive inquiries by email
   status: "Available",
+  sources: ["Facebook Marketplace", "WhatsApp", "Craigslist", "OfferUp", "Saw the car / sign", "Friend or family", "Other"],
   vin: "4T3BA3BB5EU055973",
   carfaxUrl: "",                  // optional: a shareable Carfax report link; "" sends buyers to carfax.com to look up the VIN            // "Available", "Pending", or "Sold"
   specs: [
@@ -325,6 +328,15 @@ $('notes').innerHTML = CONFIG.notes.map(n => `<p>${esc(n)}</p>`).join('');
 $('foot').textContent = title + ' · ' + CONFIG.location;
 $('callBtn').href = 'tel:' + telDigits;
 $('textBtn').href = 'sms:' + telDigits + '?&body=' + encodeURIComponent("Hi, is the " + title + " still available?");
+
+/* ----- "how did you hear" options ----- */
+CONFIG.sources.forEach(o => $('f-source').add(new Option(o, o)));
+(function guessSource() {
+  const ref = (new URLSearchParams(location.search).get('ref') || document.referrer || '').toLowerCase();
+  const match = [['facebook', 'Facebook Marketplace'], ['fb', 'Facebook Marketplace'], ['whatsapp', 'WhatsApp'],
+    ['craigslist', 'Craigslist'], ['offerup', 'OfferUp']].find(([k]) => ref.includes(k));
+  if (match && CONFIG.sources.includes(match[1])) $('f-source').value = match[1];
+})();
 
 /* ----- VIN & history ----- */
 if (CONFIG.vin) {
@@ -415,7 +427,7 @@ form.addEventListener('submit', async e => {
   if (d._gotcha) return;
   if (!d.name.trim()) { say('Please enter your name.'); $('f-name').focus(); return; }
   if (!d.phone.trim() && !d.email.trim()) { say('Please add a phone number or email so I can reply.'); return; }
-  const text = `${title} inquiry\n${d.topic}\nFrom: ${d.name}${d.phone ? '\nPhone: ' + d.phone : ''}${d.email ? '\nEmail: ' + d.email : ''}${d.message ? '\n\n' + d.message : ''}`;
+  const text = `${title} inquiry\n${d.topic}\nFrom: ${d.name}${d.phone ? '\nPhone: ' + d.phone : ''}${d.email ? '\nEmail: ' + d.email : ''}${d.source ? '\nHeard via: ' + d.source : ''}${d.message ? '\n\n' + d.message : ''}`;
 
   if (CONFIG.formspreeId) {
     const btn = $('submitBtn'); btn.disabled = true; btn.textContent = 'Sending…';
@@ -446,10 +458,10 @@ const store = {
   set(k, v, s) { try { s.setItem(k, JSON.stringify(v)); } catch {} },
   del(k, s) { try { s.removeItem(k); } catch {} }
 };
-const FIELDS = ['name', 'phone', 'email', 'topic', 'message'];
+const FIELDS = ['name', 'phone', 'email', 'topic', 'source', 'message'];
 function saveDraft() {
   const d = {}; FIELDS.forEach(f => d[f] = form.elements[f].value);
-  if (FIELDS.some(f => f !== 'topic' && d[f].trim())) store.set(DRAFT_KEY, d, localStorage);
+  if (FIELDS.some(f => !['topic', 'source'].includes(f) && d[f].trim())) store.set(DRAFT_KEY, d, localStorage);
   else store.del(DRAFT_KEY, localStorage);
 }
 (function restoreDraft() {
