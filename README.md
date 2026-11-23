@@ -37,6 +37,21 @@ Commit the change and the live page updates.
 - **Replace a photo:** in the `photos/` folder, upload a new image with the *same file name* as the one you're replacing.
 - **Add or remove a photo:** upload the image to `photos/`, then add or remove its line in the `PHOTOS` list in `index.html`. Each line has the file path and the caption shown on the page.
 
+## Admin panel (price & status from your phone)
+
+Open the live page with `#admin` on the end:
+`https://mrmontgomerymm-ai.github.io/car-for-sale/#admin`
+
+From there you can change the **price**, the **OBO / Firm / None** note, and **Available / Pending / Sold**, then tap **Save & publish**. Each save is a commit to this repo, and the page updates for everyone in about a minute.
+
+**One-time token setup:** the panel needs a GitHub fine-grained personal access token.
+1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. **Repository access:** *Only select repositories* → `car-for-sale`.
+3. **Permissions → Repository permissions → Contents:** *Read and write*.
+4. Pick an expiration, generate, and paste the token into the admin panel the first time you save.
+
+The token is stored only in that browser on that device, and is never added to the site. Use **Remove it** in the panel to clear it. If the token is lost or leaked, delete it on GitHub and make a new one.
+
 ## Inquiries
 
 - **Default:** the form opens the buyer's texting app with their message filled in, addressed to the listing phone.

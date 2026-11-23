@@ -116,6 +116,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .toast button{font:inherit;font-weight:700;font-size:14px;border:0;border-radius:10px;min-height:40px;padding:8px 14px;cursor:pointer}
 .toast .t-go{background:#fff;color:var(--navy)}
 .toast .t-later{background:transparent;color:#cbd5e1}
+.adm{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.55);display:none;align-items:flex-end;justify-content:center}
+.adm.open{display:flex}
+.adm-card{background:#fff;width:min(520px,100%);border-radius:18px 18px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  max-height:92vh;overflow:auto;box-shadow:0 -10px 30px rgba(0,0,0,.2)}
+@media (min-width:600px){.adm{align-items:center}.adm-card{border-radius:18px}}
+.adm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.adm-head h3{font-size:18px}
+.adm-head button{background:none;border:0;font-size:28px;line-height:1;cursor:pointer;color:var(--muted)}
+.adm-grid{display:grid;gap:12px}
+.adm-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;background:#edf2f7;border-radius:10px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-weight:600;font-size:14px;min-height:40px;border-radius:8px;cursor:pointer;color:#334155}
+.seg button.on{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.adm small{color:var(--muted);font-size:12px;line-height:1.4}
+.adm .linkish{background:none;border:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;padding:0;text-decoration:underline}
+.adm-fab{position:fixed;right:14px;top:66px;z-index:25;background:#fff;color:var(--navy);border:1px solid var(--line);
+  border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;font-size:13px;box-shadow:var(--shadow);cursor:pointer;display:none}
+.adm-fab.show{display:block}
 footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
 
 /* sticky action bar */
@@ -241,6 +259,28 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 24px}
   <a class="btn btn-primary" href="#inquire">Inquire</a>
 </div></nav>
 
+<button class="adm-fab" id="admFab" type="button">⚙ Admin</button>
+<div class="adm" id="adm" role="dialog" aria-modal="true" aria-labelledby="admTitle">
+  <div class="adm-card">
+    <div class="adm-head"><h3 id="admTitle">Update listing</h3><button id="admClose" aria-label="Close">×</button></div>
+    <div class="adm-grid">
+      <div class="field"><label for="a-price">Price</label>
+        <input id="a-price" inputmode="numeric" placeholder="e.g. 7500 — leave blank for “Contact for price”"></div>
+      <div class="field"><label>Price note</label>
+        <div class="seg" id="a-note"><button type="button" data-v="OBO">OBO</button><button type="button" data-v="Firm">Firm</button><button type="button" data-v="">None</button></div></div>
+      <div class="field"><label>Status</label>
+        <div class="seg" id="a-status"><button type="button" data-v="Available">Available</button><button type="button" data-v="Pending">Pending</button><button type="button" data-v="Sold">Sold</button></div></div>
+      <div class="field" id="a-tokwrap"><label for="a-token">GitHub access token</label>
+        <input id="a-token" type="password" autocomplete="off" placeholder="github_pat_…">
+        <small>Saved only on this device. Needs “Contents: Read and write” on this repo.</small></div>
+      <div id="a-tokset" style="display:none"><small>Token saved on this device. <button class="linkish" id="a-forget" type="button">Remove it</button></small></div>
+      <div class="status" id="a-msg"></div>
+      <button class="btn btn-primary" id="a-save" type="button">Save &amp; publish</button>
+      <small>Changes go live for everyone in about a minute. Open this panel any time by adding <b>#admin</b> to the page link.</small>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite">
   <div class="t-msg"><b>Listing updated</b>Refresh to see the latest. Anything you've typed will be kept.</div>
   <button class="t-later" id="tLater" type="button">Later</button>
@@ -269,6 +309,7 @@ const CONFIG = {
   email: "",                      // optional: fallback inquiries open an email to this address
   formspreeId: "",                // optional: Formspree form ID (e.g. "xyzabcd") to receive inquiries by email
   status: "Available",
+  repo: "mrmontgomerymm-ai/car-for-sale",   // used by the admin panel (open the page with #admin)
   sources: ["Facebook Marketplace", "WhatsApp", "Craigslist", "OfferUp", "Saw the car / sign", "Friend or family", "Other"],
   vin: "4T3BA3BB5EU055973",
   carfaxUrl: "",                  // optional: a shareable Carfax report link; "" sends buyers to carfax.com to look up the VIN            // "Available", "Pending", or "Sold"
@@ -508,7 +549,7 @@ async function latestModified() {
 }
 function isActive() {
   const a = document.activeElement;
-  return (a && form.contains(a)) || !!store.get(DRAFT_KEY, localStorage) || $('lb').classList.contains('open');
+  return (a && form.contains(a)) || !!store.get(DRAFT_KEY, localStorage) || $('lb').classList.contains('open') || $('adm').classList.contains('open');
 }
 function reloadKeepingState() {
   saveDraft();
@@ -533,6 +574,79 @@ addEventListener('focus', checkForUpdate);
 addEventListener('pageshow', e => { if (e.persisted) checkForUpdate(); });  // back/forward cache
 checkForUpdate();
 setInterval(() => { if (!document.hidden) checkForUpdate(); }, 60000);
+
+/* ----- admin panel (open with #admin) ----- */
+const TOKEN_KEY = 'listing-admin-token';
+const adm = {
+  open() {
+    $('a-price').value = (CONFIG.price || '').replace(/[^\d]/g, '');
+    setSeg('a-note', CONFIG.priceNote); setSeg('a-status', CONFIG.status);
+    const has = !!getToken();
+    $('a-tokwrap').style.display = has ? 'none' : ''; $('a-tokset').style.display = has ? '' : 'none';
+    $('a-msg').className = 'status';
+    $('adm').classList.add('open'); $('admFab').classList.add('show');
+    try { localStorage.setItem('listing-admin', '1'); } catch {}
+  },
+  close() { $('adm').classList.remove('open'); if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search); }
+};
+function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+function setSeg(id, v) { [...$(id).children].forEach(b => b.classList.toggle('on', b.dataset.v === (v || ''))); }
+function segVal(id) { const b = $(id).querySelector('.on'); return b ? b.dataset.v : ''; }
+['a-note', 'a-status'].forEach(id => $(id).addEventListener('click', e => { if (e.target.dataset.v !== undefined) setSeg(id, e.target.dataset.v); }));
+function admSay(msg, ok) { $('a-msg').textContent = msg; $('a-msg').className = 'status show ' + (ok ? 'ok' : 'err'); }
+const b64dec = b => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g, '')), c => c.charCodeAt(0)));
+const b64enc = t => { const u = new TextEncoder().encode(t); let s = ''; u.forEach(c => s += String.fromCharCode(c)); return btoa(s); };
+const fmtPrice = d => d ? '$' + Number(d).toLocaleString('en-US') : '';
+
+$('a-save').onclick = async () => {
+  const digits = $('a-price').value.replace(/[^\d]/g, '');
+  if ($('a-price').value.trim() && !digits) return admSay('Enter the price as a number, e.g. 7500.');
+  const typed = $('a-token').value.trim();
+  const token = typed || getToken();
+  if (!token) return admSay('Paste your GitHub access token first.');
+  const next = {price: fmtPrice(digits), priceNote: segVal('a-note'), status: segVal('a-status') || 'Available'};
+  const btn = $('a-save'); btn.disabled = true; btn.textContent = 'Publishing…';
+  const api = `https://api.github.com/repos/${CONFIG.repo}/contents/index.html`;
+  const headers = {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json'};
+  try {
+    const r = await fetch(api + '?ref=main&_=' + Date.now(), {headers, cache: 'no-store'});
+    if (r.status === 401 || r.status === 403) throw new Error('auth');
+    if (!r.ok) throw new Error('read');
+    const file = await r.json();
+    let src = b64dec(file.content);
+    for (const [k, v] of Object.entries(next)) {
+      const re = new RegExp('^(\\s*' + k + ':\\s*)"[^"]*"', 'm');
+      if (!re.test(src)) throw new Error('format');
+      src = src.replace(re, (m, p1) => p1 + JSON.stringify(v));
+    }
+    const parts = [next.price || 'Contact for price', next.priceNote, next.status].filter(Boolean).join(' · ');
+    const w = await fetch(api, {method: 'PUT', headers, body: JSON.stringify({
+      message: 'Update listing: ' + parts + ' (admin panel)', content: b64enc(src), sha: file.sha, branch: 'main'})});
+    if (w.status === 401 || w.status === 403) throw new Error('auth');
+    if (w.status === 409) throw new Error('conflict');
+    if (!w.ok) throw new Error('write');
+    if (typed) { try { localStorage.setItem(TOKEN_KEY, typed); } catch {} $('a-token').value = ''; }
+    Object.assign(CONFIG, next);   // show it right away on this screen
+    $('price').innerHTML = CONFIG.price ? esc(CONFIG.price) + (CONFIG.priceNote ? '<small>' + esc(CONFIG.priceNote) + '</small>' : '') : 'Contact for price';
+    const chip = $('chips').firstElementChild; chip.textContent = CONFIG.status; chip.className = CONFIG.status === 'Available' ? 'chip ok' : 'chip';
+    $('a-tokwrap').style.display = 'none'; $('a-tokset').style.display = '';
+    admSay('Saved: ' + parts + '. Live for everyone in about a minute.', true);
+  } catch (e) {
+    admSay({auth: 'GitHub rejected the token. Check it has Contents: Read and write on this repo and hasn’t expired.',
+      conflict: 'The file changed at the same moment. Tap Save again.',
+      format: 'Couldn’t find the price settings in index.html. Check the CONFIG block wasn’t renamed.'}[e.message]
+      || 'Couldn’t reach GitHub. Check your connection and try again.');
+  }
+  btn.disabled = false; btn.textContent = 'Save & publish';
+};
+$('a-forget').onclick = () => { try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('listing-admin'); } catch {}
+  $('a-tokwrap').style.display = ''; $('a-tokset').style.display = 'none'; $('admFab').classList.remove('show'); admSay('Token removed from this device.', true); };
+$('admClose').onclick = adm.close;
+$('adm').addEventListener('click', e => { if (e.target.id === 'adm') adm.close(); });
+$('admFab').onclick = adm.open;
+addEventListener('hashchange', () => { if (location.hash === '#admin') adm.open(); });
+if (location.hash === '#admin') adm.open();
+try { if (localStorage.getItem('listing-admin') && getToken()) $('admFab').classList.add('show'); } catch {}
 </script>
 </body>
 </html>
