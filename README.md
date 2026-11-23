@@ -6,7 +6,7 @@ A one-page listing site for a Toyota Venza XLE AWD sold by its owner in Houston,
 
 ## How it works
 
-Everything lives in `index.html`: the page, its styling, the photos and the inquiry form. There's nothing to build and nothing else to deploy.
+`index.html` holds the page, its styling, the listing details and the inquiry form. The photos are in the `photos/` folder, which keeps `index.html` small enough to edit safely in GitHub's browser editor (it only saves the first 1 MB of a file). There's nothing to build.
 
 GitHub Pages serves `index.html` from the `main` branch. Every commit goes live on its own, usually within a minute.
 
@@ -31,6 +31,11 @@ Open `index.html` on GitHub (in a browser or the mobile app) and click the penci
 | `specs` / `features` / `notes` | The details, features list and seller notes |
 
 Commit the change and the live page updates.
+
+### Changing photos
+
+- **Replace a photo:** in the `photos/` folder, upload a new image with the *same file name* as the one you're replacing.
+- **Add or remove a photo:** upload the image to `photos/`, then add or remove its line in the `PHOTOS` list in `index.html`. Each line has the file path and the caption shown on the page.
 
 ## Inquiries
 
